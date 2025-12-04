@@ -1,0 +1,57 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Flask
+instance/
+.env
+.flaskenv
+
+# Uploads
+vulnerable_app/uploads/*
+!vulnerable_app/uploads/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# Reports
+reports/
+*.csv
+*.html
+*.json
+
+# Data files
+data/*.pcap
+data/*.cap
+
+/CLAUDE.md
+/.claude/

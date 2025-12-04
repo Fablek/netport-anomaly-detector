@@ -1,0 +1,60 @@
+# Network Port Anomaly Detector - Configuration
+
+# Data Source Settings
+data_source:
+  mode: "simulator"  # Options: pcap, live, simulator
+  pcap_file: "data/sample_traffic.pcap"
+  network_interface: "en0"  # For live capture
+
+# Detection Settings
+detection:
+  # Statistical Detection
+  statistical:
+    enabled: true
+    z_score_threshold: 3.0
+    window_size: 100
+
+  # Machine Learning Detection
+  ml:
+    enabled: true
+    isolation_forest:
+      contamination: 0.1
+      n_estimators: 100
+    one_class_svm:
+      nu: 0.1
+      gamma: 'auto'
+
+  # Heuristic Rules
+  heuristic:
+    enabled: true
+    port_scan:
+      threshold: 10  # ports per second
+      time_window: 5  # seconds
+    ddos:
+      threshold: 100  # connections per second
+      time_window: 1  # second
+
+  # Temporal Analysis
+  temporal:
+    enabled: true
+    rate_limit: 50  # requests per second
+    burst_threshold: 200  # sudden spike
+
+# Dashboard Settings
+dashboard:
+  host: "127.0.0.1"
+  port: 5000
+  debug: true
+  auto_refresh: 2  # seconds
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/anomaly_detector.log"
+  console: true
+
+# Reporting
+reporting:
+  output_dir: "reports"
+  formats: ["json", "html", "csv"]
+  include_charts: true
