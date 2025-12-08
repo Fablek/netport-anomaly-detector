@@ -167,11 +167,9 @@ def main():
         print("✅ Analysis completed successfully!")
         print("="*70)
 
-        # TO JEST KLUCZOWA CZĘŚĆ, KTÓREJ BRAKOWAŁO:
         if not args.no_dashboard:
             print("\n💡 Dashboard is still running. Press Ctrl+C to exit.")
             try:
-                # Pętla nieskończona trzymająca program przy życiu dla dashboardu
                 while True:
                     time.sleep(1)
             except KeyboardInterrupt:

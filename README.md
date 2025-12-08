@@ -421,8 +421,6 @@ Educational project - Academic use only
 
 ## 🎯 Future Enhancements
 
-See [TODO.md](TODO.md) for detailed roadmap.
-
 - [ ] Deep Learning (LSTM) for complex pattern detection
 - [ ] Threat intelligence feed integration
 - [ ] Geolocation-based analysis
