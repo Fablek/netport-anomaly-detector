@@ -3,8 +3,7 @@
 import logging
 import threading
 import time
-from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from .data_sources.base import DataSource, NetworkPacket
 from .data_sources.pcap_reader import PCAPReader
@@ -22,15 +21,18 @@ from .utils.logger import setup_logger
 class NetworkAnalyzer:
     """Main network traffic analyzer"""
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config: Optional[Union[str, ConfigLoader]] = None):
         """
         Initialize the network analyzer
 
         Args:
-            config_path: Path to configuration file
+            config: Path to configuration file OR ConfigLoader instance
         """
         # Load configuration
-        self.config = ConfigLoader(config_path)
+        if isinstance(config, ConfigLoader):
+            self.config = config
+        else:
+            self.config = ConfigLoader(config)
 
         # Setup logger
         self.logger = setup_logger(
@@ -72,8 +74,9 @@ class NetworkAnalyzer:
 
         elif mode == 'live':
             interface = self.config.network_interface
-            self.data_source = LiveCapture(interface=interface, packet_count=1000)
-            self.logger.info(f"Initialized live capture: {interface}")
+            # W trybie live ignorujemy packet_count z configu
+            self.data_source = LiveCapture(interface=interface)
+            self.logger.info(f"Initialized live capture on interface: {interface}")
 
         elif mode == 'simulator':
             packet_count = self.config.get('data_source.packet_count', 1000)
@@ -202,9 +205,6 @@ class NetworkAnalyzer:
     def _analyze_batch(self, packets: List[NetworkPacket]):
         """
         Analyze a batch of packets
-
-        Args:
-            packets: List of packets to analyze
         """
         batch_anomalies = []
 
@@ -212,7 +212,8 @@ class NetworkAnalyzer:
         for detector in self.detectors:
             if detector.enabled:
                 try:
-                    anomalies = detector.detect(self.packets)
+                    # Pass only the current batch to detectors
+                    anomalies = detector.detect(packets)
                     batch_anomalies.extend(anomalies)
                 except Exception as e:
                     self.logger.error(f"Error in {detector.name}: {e}", exc_info=True)
@@ -233,6 +234,7 @@ class NetworkAnalyzer:
                 f"Analyzed {len(packets)} packets, detected {len(batch_anomalies)} anomalies"
             )
 
+    # Reszta metod (get_statistics, get_anomalies, clear_data) bez zmian...
     def get_statistics(self) -> dict:
         """Get analysis statistics"""
         from collections import Counter
@@ -259,13 +261,11 @@ class NetworkAnalyzer:
         }
 
     def get_anomalies(self, limit: int = None) -> List[Anomaly]:
-        """Get detected anomalies"""
         if limit:
             return self.anomalies[-limit:]
         return self.anomalies
 
     def clear_data(self):
-        """Clear all collected data"""
         self.packets = []
         self.anomalies = []
         for detector in self.detectors:

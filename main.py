@@ -22,26 +22,10 @@ from src.utils.logger import setup_logger
 def main():
     """Main application entry point"""
     parser = argparse.ArgumentParser(
-        description='Network Port Anomaly Detector',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Run with simulator (default)
-  python main.py
-
-  # Run with PCAP file
-  python main.py --mode pcap --pcap-file data/capture.pcap
-
-  # Run without dashboard
-  python main.py --no-dashboard
-
-  # Generate reports only
-  python main.py --report-only
-        """
+        description='Network Port Anomaly Detector'
     )
 
     parser.add_argument('--mode', choices=['simulator', 'pcap', 'live'],
-                       default='simulator',
                        help='Data source mode')
     parser.add_argument('--pcap-file', type=str,
                        help='PCAP file path (for pcap mode)')
@@ -57,8 +41,6 @@ Examples:
                        help='Output directory for reports')
 
     args = parser.parse_args()
-
-    # Setup logger
     logger = setup_logger("Main", level="INFO")
 
     print("""
@@ -80,23 +62,19 @@ Examples:
         if args.interface:
             config.config['data_source']['network_interface'] = args.interface
 
-        # Initialize analyzer
+        # Initialize analyzer WITH CONFIG OBJECT
         logger.info("Initializing Network Analyzer...")
-        analyzer = NetworkAnalyzer(args.config)
+        analyzer = NetworkAnalyzer(config)
 
-        # Initialize report generator
         report_gen = ReportGenerator(args.output_dir)
 
         if args.report_only:
-            # Run analysis and generate reports
             logger.info("Running analysis in report-only mode...")
             analyzer.start()
-
-            # Wait for analysis to complete
             while analyzer.is_running:
                 time.sleep(1)
 
-            # Generate reports
+            # Generate reports logic for report-only mode
             logger.info("Generating reports...")
             statistics = analyzer.get_statistics()
             reports = report_gen.generate_all_reports(
@@ -104,30 +82,31 @@ Examples:
                 analyzer.anomalies,
                 statistics
             )
-
             print("\n📊 Reports generated:")
             for format_type, path in reports.items():
                 if path:
                     print(f"  - {format_type.upper()}: {path}")
-
             return
 
         # Setup dashboard integration
         if not args.no_dashboard:
             analyzer.set_dashboard_callback(update_dashboard)
 
-            # Start dashboard in separate thread
+            # Handle port conflict or custom port
+            dash_port = int(config.dashboard_port)
+
+            # Start dashboard thread
             dashboard_thread = threading.Thread(
                 target=run_dashboard,
-                args=(config.dashboard_host, config.dashboard_port, False),
+                args=(config.dashboard_host, dash_port, False),
                 daemon=True
             )
             dashboard_thread.start()
 
-            logger.info(f"Dashboard started at http://{config.dashboard_host}:{config.dashboard_port}")
-            print(f"\n🌐 Dashboard: http://{config.dashboard_host}:{config.dashboard_port}")
+            logger.info(f"Dashboard started at http://{config.dashboard_host}:{dash_port}")
+            print(f"\n🌐 Dashboard: http://{config.dashboard_host}:{dash_port}")
 
-            time.sleep(2)  # Give dashboard time to start
+            time.sleep(2)
 
         # Start analyzer
         logger.info("Starting network traffic analysis...")
@@ -138,11 +117,19 @@ Examples:
         set_running_state(True)
         analyzer.start()
 
-        # Wait for analysis to complete
-        while analyzer.is_running:
-            time.sleep(1)
+        # Wait loop - keep running analysis
+        try:
+            while True:
+                if not analyzer.is_running and config.data_source_mode != 'live':
+                     # Jeśli analiza się skończyła (symulator/pcap), wychodzimy z pętli czekania na analizę
+                     break
+                time.sleep(1)
+        except KeyboardInterrupt:
+            # Przerwanie analizy przez użytkownika
+            pass
 
         set_running_state(False)
+        analyzer.stop()
 
         # Display summary
         statistics = analyzer.get_statistics()
@@ -180,9 +167,11 @@ Examples:
         print("✅ Analysis completed successfully!")
         print("="*70)
 
+        # TO JEST KLUCZOWA CZĘŚĆ, KTÓREJ BRAKOWAŁO:
         if not args.no_dashboard:
             print("\n💡 Dashboard is still running. Press Ctrl+C to exit.")
             try:
+                # Pętla nieskończona trzymająca program przy życiu dla dashboardu
                 while True:
                     time.sleep(1)
             except KeyboardInterrupt:
@@ -190,10 +179,8 @@ Examples:
 
     except KeyboardInterrupt:
         print("\n\n⚠️  Interrupted by user")
-        logger.info("Application interrupted by user")
     except Exception as e:
         logger.error(f"Application error: {e}", exc_info=True)
-        print(f"\n❌ Error: {e}")
         sys.exit(1)
 
 

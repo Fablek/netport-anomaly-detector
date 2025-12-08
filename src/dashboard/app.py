@@ -34,13 +34,11 @@ dashboard_state = {
 
 @app.route('/')
 def index():
-    """Main dashboard page"""
     return render_template('dashboard.html')
 
 
 @app.route('/api/status')
 def get_status():
-    """Get current system status"""
     return jsonify({
         'is_running': dashboard_state['is_running'],
         'total_packets': dashboard_state['statistics']['total_packets'],
@@ -50,48 +48,42 @@ def get_status():
 
 @app.route('/api/statistics')
 def get_statistics():
-    """Get current statistics"""
     return jsonify(dashboard_state['statistics'])
 
 
 @app.route('/api/anomalies')
 def get_anomalies():
-    """Get recent anomalies"""
     limit = request.args.get('limit', 50, type=int)
     return jsonify(dashboard_state['anomalies'][-limit:])
 
 
 @app.route('/api/packets')
 def get_packets():
-    """Get recent packets"""
     limit = request.args.get('limit', 100, type=int)
     return jsonify(dashboard_state['packets'][-limit:])
 
 
 def update_dashboard(packets, anomalies):
-    """
-    Update dashboard state with new data
-
-    Args:
-        packets: List of NetworkPacket objects
-        anomalies: List of Anomaly objects
-    """
-    # Convert packets to dict
+    """Update dashboard state with new data"""
     packet_dicts = [p.to_dict() for p in packets]
     anomaly_dicts = [a.to_dict() for a in anomalies]
 
-    # Update global state
+    # ZWIĘKSZ LICZNIKI (zanim przytniemy listy!)
+    dashboard_state['statistics']['total_packets'] += len(packets)
+    dashboard_state['statistics']['total_anomalies'] += len(anomalies)
+
+    # Update buffers
     dashboard_state['packets'].extend(packet_dicts)
     dashboard_state['anomalies'].extend(anomaly_dicts)
 
-    # Keep only last 1000 packets
+    # Keep only last 1000 packets for display
     if len(dashboard_state['packets']) > 1000:
         dashboard_state['packets'] = dashboard_state['packets'][-1000:]
 
     if len(dashboard_state['anomalies']) > 500:
         dashboard_state['anomalies'] = dashboard_state['anomalies'][-500:]
 
-    # Update statistics
+    # Update other statistics
     update_statistics(packets, anomalies)
 
     # Emit to connected clients
@@ -107,17 +99,17 @@ def update_statistics(packets, anomalies):
     from collections import Counter
 
     all_packets = dashboard_state['packets']
-    all_anomalies = dashboard_state['anomalies']
 
-    dashboard_state['statistics']['total_packets'] = len(all_packets)
-    dashboard_state['statistics']['total_anomalies'] = len(all_anomalies)
+    # Używamy globalnych liczników, a nie długości bufora!
+    total_packets = dashboard_state['statistics']['total_packets']
+    total_anomalies = dashboard_state['statistics']['total_anomalies']
 
-    if len(all_packets) > 0:
+    if total_packets > 0:
         dashboard_state['statistics']['detection_rate'] = (
-            len(all_anomalies) / len(all_packets) * 100
+            total_anomalies / total_packets * 100
         )
 
-    # Top source IPs
+    # Top stats based on current buffer (approximation is fine for live view)
     src_ips = [p['src_ip'] for p in all_packets if 'src_ip' in p]
     src_counter = Counter(src_ips)
     dashboard_state['statistics']['top_sources'] = [
@@ -125,7 +117,6 @@ def update_statistics(packets, anomalies):
         for ip, count in src_counter.most_common(10)
     ]
 
-    # Top ports
     dst_ports = [p['dst_port'] for p in all_packets if 'dst_port' in p and p['dst_port'] > 0]
     port_counter = Counter(dst_ports)
     dashboard_state['statistics']['top_ports'] = [
@@ -133,14 +124,12 @@ def update_statistics(packets, anomalies):
         for port, count in port_counter.most_common(10)
     ]
 
-    # Protocol distribution
     protocols = [p['protocol'] for p in all_packets if 'protocol' in p]
     proto_counter = Counter(protocols)
     dashboard_state['statistics']['protocol_distribution'] = dict(proto_counter)
 
 
 def set_running_state(is_running: bool):
-    """Set the running state of the system"""
     dashboard_state['is_running'] = is_running
     socketio.emit('status_change', {'is_running': is_running})
 
@@ -162,25 +151,15 @@ def clear_dashboard():
 
 @socketio.on('connect')
 def handle_connect():
-    """Handle client connection"""
     logger.info("Client connected to dashboard")
     emit('status_change', {'is_running': dashboard_state['is_running']})
 
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """Handle client disconnection"""
     logger.info("Client disconnected from dashboard")
 
 
 def run_dashboard(host='127.0.0.1', port=5000, debug=False):
-    """
-    Run the Flask dashboard
-
-    Args:
-        host: Host to bind to
-        port: Port to bind to
-        debug: Debug mode
-    """
     logger.info(f"Starting dashboard on http://{host}:{port}")
     socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)

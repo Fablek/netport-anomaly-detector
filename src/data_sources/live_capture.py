@@ -3,6 +3,7 @@
 import logging
 from datetime import datetime
 from typing import Iterator
+import time
 
 try:
     from scapy.all import sniff, IP, TCP, UDP
@@ -17,11 +18,12 @@ class LiveCapture(DataSource):
     """Captures live network traffic"""
 
     def __init__(self, interface: str = None, packet_count: int = 100):
+        # packet_count w trybie live ignorujemy jako limit całkowity,
+        # użyjemy go jako rozmiaru buffora (batch size)
         super().__init__()
         self.interface = interface
-        self.packet_count = packet_count
+        self.batch_size = 50  # Pobieraj po 50 pakietów na raz
         self.logger = logging.getLogger(__name__)
-        self.captured_packets = []
 
         if not SCAPY_AVAILABLE:
             raise ImportError("Scapy is required for live capture. Install with: pip install scapy")
@@ -37,10 +39,10 @@ class LiveCapture(DataSource):
         self.is_running = False
         self.logger.info("Stopped live capture")
 
-    def _packet_handler(self, pkt):
-        """Handle captured packet"""
+    def _process_packet(self, pkt) -> NetworkPacket:
+        """Convert Scapy packet to NetworkPacket"""
         if IP not in pkt:
-            return
+            return None
 
         ip_layer = pkt[IP]
         protocol = None
@@ -61,7 +63,7 @@ class LiveCapture(DataSource):
         else:
             protocol = str(ip_layer.proto)
 
-        packet = NetworkPacket(
+        return NetworkPacket(
             timestamp=datetime.now(),
             src_ip=ip_layer.src,
             dst_ip=ip_layer.dst,
@@ -72,33 +74,37 @@ class LiveCapture(DataSource):
             flags=flags
         )
 
-        self.captured_packets.append(packet)
-
     def get_packets(self) -> Iterator[NetworkPacket]:
         """
-        Capture and yield live packets
+        Capture and yield live packets continuously
 
         Yields:
             NetworkPacket: Live network packets
         """
         try:
-            self.logger.info(f"Starting packet capture (count: {self.packet_count})")
+            self.logger.info("Starting continuous packet capture...")
 
-            # Capture packets
-            sniff(
-                iface=self.interface,
-                prn=self._packet_handler,
-                count=self.packet_count,
-                store=False
-            )
+            # Pętla nieskończona - działa dopóki nie zatrzymamy programu
+            while self.is_running:
+                # Pobieramy małą partię pakietów (np. 50) z timeoutem
+                # Timeout jest ważny, żeby pętla nie wisiała w nieskończoność przy braku ruchu
+                packets = sniff(
+                    iface=self.interface,
+                    count=self.batch_size,
+                    timeout=1.0,  # Czekaj max 1 sekundę na pakiety
+                    store=True    # Musimy zapisać, żeby je przetworzyć
+                )
 
-            # Yield captured packets
-            for packet in self.captured_packets:
-                if not self.is_running:
-                    break
-                yield packet
+                if not packets:
+                    continue
 
-            self.captured_packets = []
+                for pkt in packets:
+                    processed_pkt = self._process_packet(pkt)
+                    if processed_pkt:
+                        yield processed_pkt
+
+                if len(packets) == 0:
+                    time.sleep(0.1)
 
         except PermissionError:
             self.logger.error("Permission denied. Live capture requires root/administrator privileges")
