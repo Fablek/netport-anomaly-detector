@@ -11,17 +11,17 @@ detection:
   # Statistical Detection
   statistical:
     enabled: true
-    z_score_threshold: 3.0
+    z_score_threshold: 5.0
     window_size: 100
 
   # Machine Learning Detection
   ml:
     enabled: true
     isolation_forest:
-      contamination: 0.1
+      contamination: 0.01
       n_estimators: 100
     one_class_svm:
-      nu: 0.1
+      nu: 0.01
       gamma: 'auto'
 
   # Heuristic Rules

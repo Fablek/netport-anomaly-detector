@@ -167,13 +167,20 @@ class HeuristicDetector(AnomalyDetector):
         # Define suspicious port ranges
         # High ports (> 49152) or uncommon service ports
         suspicious_high_ports = range(49152, 65536)
-        common_ports = {20, 21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 5432, 6379, 8080, 8443}
+        common_ports = {
+            20, 21, 22, 23, 25, 53, 67, 68, 80, 110, 123, 143, 443,  # Standard
+            3306, 5432, 6379, 8080, 8443, 8000, 8008, 8009,  # Dev/DB
+            5353, 1900, 5000, 5001,  # mDNS, UPnP, Flask
+            993, 465, 587  # Secure Email
+        }
 
         suspicious_connections: Dict[int, List[NetworkPacket]] = defaultdict(list)
 
         for pkt in packets:
-            # Check destination port
-            if pkt.dst_port not in common_ports and pkt.dst_port > 10000:
+            if pkt.dst_port >= 49152:
+                continue
+
+            if pkt.dst_port not in common_ports and pkt.dst_port > 1024:
                 suspicious_connections[pkt.dst_port].append(pkt)
 
         # Report if multiple connections to same unusual port

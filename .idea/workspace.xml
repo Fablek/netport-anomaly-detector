@@ -6,11 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="6d6b03d7-04fd-4e4b-8b0d-a7efb74b0b5d" name="Changes" comment="feat: init project">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dashboard/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dashboard/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/data_sources/simulator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/data_sources/simulator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/detectors/heuristic_detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/detectors/heuristic_detector.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
