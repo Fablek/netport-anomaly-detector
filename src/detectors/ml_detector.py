@@ -25,6 +25,7 @@ class MLDetector(AnomalyDetector):
         self.use_one_class_svm = use_one_class_svm
         self.contamination = contamination
         self.nu = nu
+        self.min_confidence = 0.3  # Ignoruj anomalie z confidence < 0.3
         self.logger = logging.getLogger(__name__)
 
         # Initialize models
@@ -32,6 +33,63 @@ class MLDetector(AnomalyDetector):
         self.one_class_svm = None
         self.scaler = StandardScaler()
         self.is_trained = False
+
+        # Whitelist for known legitimate IP ranges and ports
+        self.whitelisted_ip_prefixes = [
+            '142.250.',  # Google
+            '172.217.',  # Google
+            '17.0.',     # Apple
+            '17.250.',   # Apple
+            '20.189.',   # Microsoft
+            '13.107.',   # Microsoft
+            '140.82.',   # GitHub
+            '3.210.',    # AWS
+            '18.244.',   # AWS
+            '52.',       # AWS (szerszy zakres)
+            '224.',      # Multicast (mDNS, SSDP)
+            '239.',      # Multicast (UPnP)
+        ]
+        self.whitelisted_ports = {
+            443,   # HTTPS
+            80,    # HTTP
+            53,    # DNS
+            5353,  # mDNS (Bonjour/Avahi)
+            1900,  # SSDP (UPnP device discovery)
+            67,    # DHCP server
+            68,    # DHCP client
+            123,   # NTP (time sync)
+            137,   # NetBIOS
+            138,   # NetBIOS
+            139,   # NetBIOS
+        }
+
+    def _is_whitelisted(self, packet: NetworkPacket) -> bool:
+        """
+        Check if packet should be whitelisted (known legitimate traffic)
+
+        Args:
+            packet: Network packet to check
+
+        Returns:
+            True if packet is whitelisted
+        """
+        # Check if destination IP is whitelisted (common services)
+        if packet.dst_ip:
+            for prefix in self.whitelisted_ip_prefixes:
+                if packet.dst_ip.startswith(prefix):
+                    return True
+
+        # Check if source IP is whitelisted (responses from known services)
+        if packet.src_ip:
+            for prefix in self.whitelisted_ip_prefixes:
+                if packet.src_ip.startswith(prefix):
+                    return True
+
+        # Whitelist common legitimate ports (HTTPS, HTTP, DNS)
+        if packet.dst_port in self.whitelisted_ports:
+            return True
+
+        return False
 
     def _extract_features(self, packets: List[NetworkPacket]) -> np.ndarray:
         """
@@ -140,8 +198,16 @@ class MLDetector(AnomalyDetector):
 
             for i, (pred, score, pkt) in enumerate(zip(predictions, scores, packets)):
                 if pred == -1:  # Anomaly detected
+                    # Skip whitelisted packets
+                    if self._is_whitelisted(pkt):
+                        continue
+
                     # Convert score to confidence (more negative = more anomalous)
                     confidence = min(abs(score) / 2.0, 1.0)
+
+                    # Skip low-confidence anomalies
+                    if confidence < self.min_confidence:
+                        continue
 
                     severity = SeverityLevel.HIGH if confidence > 0.7 else SeverityLevel.MEDIUM
 
@@ -170,7 +236,15 @@ class MLDetector(AnomalyDetector):
 
             for i, (pred, score, pkt) in enumerate(zip(predictions, scores, packets)):
                 if pred == -1:  # Anomaly detected
+                    # Skip whitelisted packets
+                    if self._is_whitelisted(pkt):
+                        continue
+
                     confidence = min(abs(score) / 2.0, 1.0)
+
+                    # Skip low-confidence anomalies
+                    if confidence < self.min_confidence:
+                        continue
 
                     severity = SeverityLevel.HIGH if confidence > 0.7 else SeverityLevel.MEDIUM
 

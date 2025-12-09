@@ -18,10 +18,10 @@ detection:
   ml:
     enabled: true
     isolation_forest:
-      contamination: 0.01
+      contamination: 0.03
       n_estimators: 100
     one_class_svm:
-      nu: 0.01
+      nu: 0.03
       gamma: 'auto'
 
   # Heuristic Rules
