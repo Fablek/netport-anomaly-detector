@@ -6,8 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="6d6b03d7-04fd-4e4b-8b0d-a7efb74b0b5d" name="Changes" comment="feat: init project">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/detectors/ml_detector.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/detectors/ml_detector.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

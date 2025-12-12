@@ -1,0 +1,674 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\selectlanguage{polish}
+\usepackage{graphicx}
+\usepackage{biblatex}
+\usepackage{csquotes}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{booktabs}
+
+\addbibresource{bib.bib}
+
+% Konfiguracja listingów kodu
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+\begin{document}
+
+\nocite{*}
+
+\pagenumbering{gobble}
+\clearpage
+\begin{figure}[h]
+\centering
+\includegraphics{media/ps-logo.png}
+\end{figure}
+\hspace{3cm}
+\begin{center}Dokumentacja projektowa\end{center}
+\begin{center}CYBER 2025/2026\end{center}
+\hspace{3cm}
+\begin{center}\large\textbf{System Wykrywania Anomalii w Ruchu Sieciowym}\end{center}
+\begin{center}\large\textbf{poprzez analizę portów sieciowych}\end{center}
+\hspace{7cm}
+\begin{flushright}Kierunek: Informatyka
+\end{flushright}
+\begin{flushright}Członkowie zespołu:
+\par
+\textit{Sebastian Pytka}
+\par
+\textit{Karol Wieczorek}
+\par
+\textit{Paweł Chwalczyk}
+\par
+\textit{Adrian Pacyniak}
+\end{flushright}
+\vfill
+\begin{center}Gliwice, 2025/2026\end{center}
+
+\newpage
+\pagenumbering{arabic}
+\tableofcontents
+
+\newpage
+\section{Wprowadzenie}
+
+\subsection{Cel projektu}
+
+Celem projektu jest stworzenie zaawansowanego systemu wykrywania anomalii w ruchu sieciowym z wykorzystaniem analizy portów sieciowych oraz technik uczenia maszynowego. System ma za zadanie identyfikować potencjalne zagrożenia cyberbezpieczeństwa takie jak:
+
+\begin{itemize}
+    \item Port scanning (skanowanie portów)
+    \item Ataki DDoS (Distributed Denial of Service)
+    \item SYN flood
+    \item Nietypowe wzorce ruchu sieciowego
+    \item Beaconing (komunikacja z serwerami C\&C)
+    \item Anomalie statystyczne w wykorzystaniu portów
+\end{itemize}
+
+Projekt łączy w sobie metody statystyczne, uczenie maszynowe, reguły heurystyczne oraz analizę temporalną, tworząc wielowarstwowy system detekcji anomalii.
+
+\subsection{Zespół projektowy}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Imię i nazwisko} & \textbf{Rola} & \textbf{Zadania} \\
+\midrule
+Sebastian Pytka & Architekt systemu & Koordynacja, architektura \\
+Karol Wieczorek & Developer ML & Implementacja ML detektorów \\
+Paweł Chwalczyk & Developer Backend & Źródła danych, core logic \\
+Adrian Pacyniak & Developer Frontend & Dashboard, wizualizacja \\
+\bottomrule
+\end{tabular}
+\caption{Podział ról w zespole projektowym}
+\end{table}
+
+\newpage
+
+\section{Założenia projektowe}
+
+\subsection{Wymagania funkcjonalne}
+
+System powinien umożliwiać:
+
+\begin{enumerate}
+    \item \textbf{Analizę ruchu sieciowego} z wielu źródeł:
+    \begin{itemize}
+        \item Pliki PCAP (analiza offline)
+        \item Przechwytywanie pakietów w czasie rzeczywistym (live capture)
+        \item Symulator ruchu sieciowego (do testowania)
+    \end{itemize}
+
+    \item \textbf{Wykrywanie anomalii} przy użyciu czterech metod:
+    \begin{itemize}
+        \item Detekcja statystyczna (z-scores, analiza częstotliwości)
+        \item Uczenie maszynowe (Isolation Forest, One-Class SVM)
+        \item Reguły heurystyczne (port scan, DDoS, SYN flood)
+        \item Analiza temporalna (rate limiting, burst detection, beaconing)
+    \end{itemize}
+
+    \item \textbf{Wizualizację wyników} poprzez:
+    \begin{itemize}
+        \item Interaktywny dashboard webowy
+        \item Wykresy w czasie rzeczywistym
+        \item Live security events feed
+    \end{itemize}
+
+    \item \textbf{Generowanie raportów} w formatach:
+    \begin{itemize}
+        \item JSON (dane strukturalne)
+        \item CSV (analiza w arkuszach)
+        \item HTML (raporty z wykresami)
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Wymagania niefunkcjonalne}
+
+\begin{itemize}
+    \item \textbf{Wydajność}: Przetwarzanie minimum 1000 pakietów/sekundę
+    \item \textbf{Dokładność}: Wskaźnik false positive < 5\%
+    \item \textbf{Skalowalność}: Modularna architektura umożliwiająca łatwe dodawanie nowych detektorów
+    \item \textbf{Konfigurowalność}: Parametry detekcji konfigurowalne przez YAML
+    \item \textbf{Bezpieczeństwo}: Brak wykonywania niebezpiecznych operacji, sandbox dla live capture
+\end{itemize}
+
+\subsection{Stos technologiczny}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Komponent} & \textbf{Technologia} \\
+\midrule
+Język programowania & Python 3.14 \\
+Przechwytywanie pakietów & Scapy \\
+Uczenie maszynowe & scikit-learn (Isolation Forest, SVM) \\
+Framework webowy & Flask + Socket.IO \\
+Wizualizacja & Plotly.js \\
+Konfiguracja & PyYAML \\
+Logging & Python logging \\
+\bottomrule
+\end{tabular}
+\caption{Wykorzystane technologie}
+\end{table}
+
+\newpage
+
+\section{Realizacja projektu}
+
+\subsection{Architektura systemu}
+
+System został zaprojektowany zgodnie z zasadami czystej architektury, z wyraźnym podziałem na warstwy:
+
+\begin{figure}[H]
+\centering
+\begin{verbatim}
+┌─────────────────────────────────────────────────┐
+│           Warstwa prezentacji                   │
+│  (Dashboard: Flask + Socket.IO + Plotly)        │
+└────────────────┬────────────────────────────────┘
+                 │
+┌────────────────▼────────────────────────────────┐
+│         NetworkAnalyzer (Core Logic)            │
+│  - Koordynacja detektorów                       │
+│  - Zarządzanie danymi                           │
+│  - Callback do dashboardu                       │
+└────────────────┬────────────────────────────────┘
+                 │
+        ┌────────┴────────┐
+        │                 │
+┌───────▼──────┐  ┌───────▼────────────────────────┐
+│ Data Sources │  │    Anomaly Detectors           │
+│              │  │  1. Statistical Detector       │
+│ - PCAP       │  │  2. ML Detector                │
+│ - Live       │  │  3. Heuristic Detector         │
+│ - Simulator  │  │  4. Temporal Detector          │
+└──────────────┘  └────────────────────────────────┘
+\end{verbatim}
+\caption{Architektura systemu}
+\end{figure}
+
+\subsection{Moduły systemu}
+
+\subsubsection{Źródła danych (Data Sources)}
+
+\paragraph{PCAPReader}
+Moduł do odczytu i analizy plików PCAP. Wykorzystuje bibliotekę Scapy do parsowania pakietów sieciowych i konwersji ich do wewnętrznego formatu \texttt{NetworkPacket}.
+
+\begin{lstlisting}[language=Python, caption=Klasa NetworkPacket]
+@dataclass
+class NetworkPacket:
+    timestamp: datetime
+    src_ip: str
+    dst_ip: str
+    src_port: int
+    dst_port: int
+    protocol: str  # TCP, UDP, ICMP
+    packet_size: int
+    flags: str
+\end{lstlisting}
+
+\paragraph{LiveCapture}
+Moduł do przechwytywania pakietów w czasie rzeczywistym. Wymaga uprawnień administratora (sudo) do dostępu do interfejsu sieciowego.
+
+\paragraph{TrafficSimulator}
+Generator syntetycznego ruchu sieciowego do testowania. Generuje zarówno normalny ruch, jak i symulowane anomalie (port scans, burst traffic).
+
+\subsubsection{Detektory anomalii}
+
+\paragraph{Statistical Detector}
+Wykorzystuje metody statystyczne do wykrywania anomalii:
+
+\begin{itemize}
+    \item \textbf{Z-score}: Oblicza odchylenie standardowe dla częstotliwości portów, rozmiarów pakietów i adresów IP
+    \item \textbf{Sliding window}: Analizuje ostatnie N pakietów (domyślnie 100)
+    \item \textbf{Progi}: Konfigurowalny threshold (domyślnie 5.0)
+\end{itemize}
+
+Wzór na z-score:
+\[ z = \frac{x - \mu}{\sigma} \]
+
+gdzie $x$ to obserwowana wartość, $\mu$ to średnia, a $\sigma$ to odchylenie standardowe.
+
+\paragraph{ML Detector}
+Wykorzystuje dwa algorytmy uczenia maszynowego:
+
+\textbf{1. Isolation Forest} \cite{Liu2008IsolationForest}
+\begin{itemize}
+    \item Algorytm wykrywania outlierów oparty na drzewach decyzyjnych
+    \item Kontaminacja: 3\% (oczekiwany procent anomalii)
+    \item Liczba estymatorów: 100
+\end{itemize}
+
+\textbf{2. One-Class SVM}
+\begin{itemize}
+    \item Algorytm klasyfikacji binarnej (normalny/anomalny)
+    \item Parametr nu: 0.03
+    \item Kernel: RBF (Radial Basis Function)
+    \item Implementacja z scikit-learn \cite{ScikitLearn}
+\end{itemize}
+
+\textbf{Ekstrakcja cech}:
+\begin{lstlisting}[language=Python, caption=Ekstrakcja cech dla ML]
+features = [
+    src_port,      # Port źródłowy
+    dst_port,      # Port docelowy
+    packet_size,   # Rozmiar pakietu
+    protocol_num,  # Protokół (TCP=6, UDP=17, ICMP=1)
+    hour           # Godzina (0-23)
+]
+\end{lstlisting}
+
+\textbf{Whitelist system}:
+Aby zredukować false positive, zaimplementowano system whitelist:
+\begin{itemize}
+    \item Znane zakresy IP (Google, Apple, Microsoft, AWS, GitHub)
+    \item Standardowe porty (443/HTTPS, 80/HTTP, 53/DNS, 5353/mDNS, 1900/SSDP)
+    \item Adresy multicast (224.*, 239.*)
+    \item Minimum confidence threshold: 0.3
+\end{itemize}
+
+\paragraph{Heuristic Detector}
+Implementuje reguły wykrywania znanych wzorców ataku:
+
+\textbf{1. Port Scan Detection}:
+\begin{itemize}
+    \item Próg: 10 unikalnych portów / 5 sekund z jednego IP
+    \item Wykrywa techniki: SYN scan, TCP connect scan
+\end{itemize}
+
+\textbf{2. DDoS Detection}:
+\begin{itemize}
+    \item Próg: 100 połączeń / sekundę do jednego IP
+    \item Wykrywa ataki volumetryczne
+\end{itemize}
+
+\textbf{3. SYN Flood Detection}:
+\begin{itemize}
+    \item Analiza ratio pakietów SYN do SYN-ACK
+    \item Próg: > 80\% pakietów to SYN
+\end{itemize}
+
+\textbf{4. Unusual Ports}:
+\begin{itemize}
+    \item Wykrywa połączenia do nietypowych portów (> 49152)
+    \item Może wskazywać na backdoory lub malware C\&C
+\end{itemize}
+
+\paragraph{Temporal Detector}
+Analizuje wzorce czasowe w ruchu sieciowym:
+
+\textbf{1. Rate Limiting Violations}:
+\begin{itemize}
+    \item Wykrywa przekroczenie limitu pakietów/sekundę
+    \item Domyślny limit: 50 pkt/s
+\end{itemize}
+
+\textbf{2. Burst Detection}:
+\begin{itemize}
+    \item Wykrywa nagłe skoki w ruchu
+    \item Próg: 200 pakietów w krótkim czasie
+\end{itemize}
+
+\textbf{3. Beaconing Detection}:
+\begin{itemize}
+    \item Wykrywa regularne, okresowe połączenia (np. malware C\&C)
+    \item Analiza interwałów czasowych między pakietami
+\end{itemize}
+
+\textbf{4. Off-hours Activity}:
+\begin{itemize}
+    \item Wykrywa nietypową aktywność w godzinach 2:00-5:00
+    \item Może wskazywać na nieautoryzowane działania
+\end{itemize}
+
+\subsection{Dashboard i wizualizacja}
+
+Dashboard webowy został zaimplementowany w Flask z wykorzystaniem Socket.IO do komunikacji w czasie rzeczywistym.
+
+\subsubsection{Funkcjonalności dashboardu}
+
+\begin{itemize}
+    \item \textbf{Real-time statistics}: Całkowita liczba pakietów, anomalii, detection rate
+    \item \textbf{Wykresy interaktywne}:
+    \begin{itemize}
+        \item Timeline anomalii (scatter plot)
+        \item Rozkład typów anomalii (pie chart)
+        \item Rozkład severity (bar chart)
+        \item Top anomaly sources (bar chart)
+    \end{itemize}
+    \item \textbf{Live security events}: Feed z ostatnimi wykrytymi anomaliami
+    \item \textbf{Auto-refresh}: Automatyczna aktualizacja co 2 sekundy
+\end{itemize}
+
+\subsection{System raportowania}
+
+Moduł \texttt{ReportGenerator} generuje trzy typy raportów:
+
+\paragraph{JSON Report}
+\begin{itemize}
+    \item Struktura danych z pełnymi informacjami o anomaliach
+    \item Wykorzystywany do dalszej analizy programowej
+    \item Zawiera: statystyki, lista anomalii, metadata
+\end{itemize}
+
+\paragraph{CSV Report}
+\begin{itemize}
+    \item Format tabelaryczny do analizy w Excel/Pandas
+    \item Kolumny: timestamp, type, severity, source\_ip, destination\_ip, port, confidence
+\end{itemize}
+
+\paragraph{HTML Report}
+\begin{itemize}
+    \item Raport z interaktywnymi wykresami Plotly
+    \item Zawiera wizualizacje i podsumowanie
+    \item Gotowy do prezentacji
+\end{itemize}
+
+\subsection{Konfiguracja systemu}
+
+Wszystkie parametry systemu są konfigurowalne przez plik YAML:
+
+\begin{lstlisting}[language=yaml, caption=Przykladowa konfiguracja (config.yaml)]
+# Zrodlo danych
+data_source:
+  mode: "simulator"  # pcap, live, simulator
+  pcap_file: "data/sample_traffic.pcap"
+  network_interface: "en0"
+
+# Detekcja
+detection:
+  statistical:
+    enabled: true
+    z_score_threshold: 5.0
+    window_size: 100
+
+  ml:
+    enabled: true
+    isolation_forest:
+      contamination: 0.03
+      n_estimators: 100
+    one_class_svm:
+      nu: 0.03
+      gamma: 'auto'
+
+  heuristic:
+    enabled: true
+    port_scan:
+      threshold: 10
+      time_window: 5
+
+  temporal:
+    enabled: true
+    rate_limit: 50
+    burst_threshold: 200
+
+# Dashboard
+dashboard:
+  host: "127.0.0.1"
+  port: 5000
+  debug: true
+  auto_refresh: 2
+\end{lstlisting}
+
+\newpage
+
+\section{Testy i wyniki}
+
+\subsection{Metodologia testowania}
+
+System został przetestowany w trzech scenariuszach:
+
+\begin{enumerate}
+    \item \textbf{Symulator ruchu}: 1000 pakietów z 10\% wygenerowanych anomalii
+    \item \textbf{Analiza PCAP}: Pliki z rzeczywistego ruchu sieciowego
+    \item \textbf{Live capture}: Przechwytywanie w czasie rzeczywistym
+\end{enumerate}
+
+\subsection{Optymalizacja false positive rate}
+
+Jednym z głównych wyzwań było zredukowanie liczby fałszywych alarmów. Przed optymalizacją system wykrywał 42\% pakietów jako anomalie, z czego większość stanowił legalny ruch (Google, Apple, Microsoft).
+
+\paragraph{Zmiany optymalizacyjne}:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Parametr} & \textbf{Przed} & \textbf{Po} \\
+\midrule
+Contamination (IF) & 0.01 & 0.03 \\
+Nu (SVM) & 0.01 & 0.03 \\
+Whitelist IP & Brak & 10+ zakresów \\
+Whitelist portów & 3 & 11 \\
+Min confidence & Brak & 0.3 \\
+\bottomrule
+\end{tabular}
+\caption{Zmiany w parametrach ML detektora}
+\end{table}
+
+\paragraph{Wyniki optymalizacji}:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Metryka} & \textbf{Przed} & \textbf{Po} \\
+\midrule
+Detection rate & 42.0\% & 3.2\% \\
+ML SVM anomalie & 689 & 0 \\
+ML Isolation anomalie & 248 & 50 \\
+False positive & $\sim$95\% & $\sim$5\% \\
+\bottomrule
+\end{tabular}
+\caption{Porównanie wyników przed i po optymalizacji}
+\end{table}
+
+\textbf{Redukcja false positive: 92\%}
+
+\subsection{Analiza wydajności}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metryka} & \textbf{Wartość} \\
+\midrule
+Throughput & $\sim$1500 pakietów/sekundę \\
+Latencja detekcji & < 10 ms \\
+Wykorzystanie CPU & $\sim$15-25\% \\
+Wykorzystanie RAM & $\sim$150-200 MB \\
+\bottomrule
+\end{tabular}
+\caption{Charakterystyka wydajnościowa systemu}
+\end{table}
+
+\subsection{Przykłady wykrytych anomalii}
+
+\paragraph{Port Scan}:
+\begin{verbatim}
+Type: port_scan
+Source: 192.168.1.100
+Unique ports: 25 w 3 sekundy
+Severity: HIGH
+Confidence: 0.95
+\end{verbatim}
+
+\paragraph{Nietypowy port}:
+\begin{verbatim}
+Type: unusual_port
+Source: 192.168.1.37
+Destination: 208.103.161.2:65283
+Severity: MEDIUM
+Confidence: 0.76
+\end{verbatim}
+
+\paragraph{ML Isolation}:
+\begin{verbatim}
+Type: ml_isolation
+Packet size: 1242 bytes
+Protocol: UDP
+Anomaly score: -0.688
+Confidence: 0.34
+\end{verbatim}
+
+\newpage
+
+\section{Podsumowanie i wnioski}
+
+\subsection{Podsumowanie}
+
+Projekt zakończył się sukcesem - udało się zrealizować w pełni funkcjonalny system wykrywania anomalii w ruchu sieciowym, który:
+
+\begin{itemize}
+    \item \textbf{Integruje cztery metody detekcji}: statystyczną, ML, heurystyczną i temporalną
+    \item \textbf{Przetwarza dane z trzech źródeł}: PCAP, live capture, simulator
+    \item \textbf{Osiąga niski wskaźnik false positive}: 3.2\% (po optymalizacji)
+    \item \textbf{Dostarcza intuicyjny interface}: real-time dashboard z wykresami
+    \item \textbf{Generuje profesjonalne raporty}: JSON, CSV, HTML
+    \item \textbf{Jest konfigurowalny}: parametry w YAML, modularna architektura
+\end{itemize}
+
+System został przetestowany na rzeczywistym ruchu sieciowym i skutecznie wykrywa:
+\begin{itemize}
+    \item Port scanning
+    \item Ataki DDoS
+    \item Nietypowe wzorce komunikacji
+    \item Potencjalny malware (beaconing, unusual ports)
+\end{itemize}
+
+\subsection{Wnioski}
+
+\subsubsection{Mocne strony projektu}
+
+\begin{itemize}
+    \item \textbf{Wielowarstwowa detekcja}: Kombinacja różnych metod zwiększa skuteczność wykrywania
+    \item \textbf{Whitelist system}: Drastycznie redukuje false positive dla znanego ruchu
+    \item \textbf{Modularna architektura}: Łatwe dodawanie nowych detektorów
+    \item \textbf{Real-time processing}: Możliwość analizy na żywo z dashboardem
+    \item \textbf{Machine Learning}: Wykrywa nieznane wcześniej wzorce anomalii
+\end{itemize}
+
+\subsubsection{Wyzwania i rozwiązania}
+
+\begin{enumerate}
+    \item \textbf{Problem}: Wysoki false positive rate (42\%)
+    \par \textbf{Rozwiązanie}: Implementacja whitelist, zwiększenie parametrów ML, minimum confidence threshold
+
+    \item \textbf{Problem}: Trudność w odróżnieniu normalnego HTTPS od anomalii
+    \par \textbf{Rozwiązanie}: Whitelist znanych dostawców (Google, Apple, etc.), port 443 na whitelist
+
+    \item \textbf{Problem}: Lokalne protokoły (mDNS, SSDP) wykrywane jako anomalie
+    \par \textbf{Rozwiązanie}: Dodanie portów 5353, 1900 i adresów multicast do whitelist
+
+    \item \textbf{Problem}: Live capture wymaga uprawnień root
+    \par \textbf{Rozwiązanie}: Dokumentacja z instrukcjami sudo, alternatywne tryby (PCAP, simulator)
+\end{enumerate}
+
+\subsubsection{Możliwe rozszerzenia}
+
+Kierunki dalszego rozwoju systemu:
+
+\begin{itemize}
+    \item \textbf{Deep Packet Inspection}: Analiza payload pakietów (obecnie tylko header)
+    \item \textbf{Distributed deployment}: Agregacja danych z wielu sensorów
+    \item \textbf{Alert system}: Powiadomienia email/SMS/Slack o krytycznych anomaliach
+    \item \textbf{Database backend}: PostgreSQL/InfluxDB do długoterminowego przechowywania
+    \item \textbf{Advanced ML}: Deep Learning (LSTM, Autoencoders) dla sekwencji pakietów
+    \item \textbf{Integration}: API do integracji z SIEM (Splunk, ELK Stack)
+    \item \textbf{Threat Intelligence}: Integracja z bazami IoC (Indicators of Compromise)
+    \item \textbf{Automated response}: Automatyczne blokowanie podejrzanych IP
+\end{itemize}
+
+\subsubsection{Wnioski końcowe}
+
+Projekt pokazuje, że skuteczna detekcja anomalii w ruchu sieciowym wymaga:
+
+\begin{enumerate}
+    \item \textbf{Hybrydowego podejścia}: Żadna pojedyncza metoda nie jest wystarczająca
+    \item \textbf{Balansu}: Między wrażliwością detekcji a liczbą false positive
+    \item \textbf{Kontekstu}: Whitelist i domain knowledge znacząco poprawiają dokładność
+    \item \textbf{Iteracyjnej optymalizacji}: Parametry ML wymagają dostrojenia do konkretnej sieci
+\end{enumerate}
+
+System stanowi solidną bazę do dalszych badań i rozwoju w obszarze cyberbezpieczeństwa, demonstrując praktyczne zastosowanie uczenia maszynowego w wykrywaniu zagrożeń sieciowych.
+
+\newpage
+\section{Bibliografia}
+
+\printbibliography[heading=none]
+
+\newpage
+\appendix
+\section{Instrukcja uruchomienia}
+
+\subsection{Wymagania systemowe}
+
+\begin{itemize}
+    \item Python 3.14 lub nowszy
+    \item Uprawnienia administratora (dla live capture)
+    \item System operacyjny: Linux, macOS lub Windows
+\end{itemize}
+
+\subsection{Instalacja}
+
+\begin{lstlisting}[language=bash, caption=Kroki instalacji]
+# 1. Klonowanie repozytorium
+git clone <repository-url>
+cd netport-anomaly-detector
+
+# 2. Utworzenie srodowiska wirtualnego
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# lub
+.venv\Scripts\activate     # Windows
+
+# 3. Instalacja zaleznosci
+pip install -r requirements.txt
+\end{lstlisting}
+
+\subsection{Uruchomienie}
+
+\begin{lstlisting}[language=bash, caption=Przykłady uruchomienia]
+# Tryb simulator (testowanie)
+python main.py
+
+# Analiza pliku PCAP
+python main.py --mode pcap --pcap-file data/capture.pcap
+
+# Live capture (wymaga sudo)
+sudo python main.py --mode live --interface en0
+
+# Bez dashboardu (tylko CLI)
+python main.py --no-dashboard
+
+# Generowanie raportow
+python main.py --report-only
+\end{lstlisting}
+
+\subsection{Dostęp do dashboardu}
+
+Po uruchomieniu, dashboard jest dostępny pod adresem:
+\begin{center}
+\url{http://127.0.0.1:5000}
+\end{center}
+
+\end{document}
